@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import AddQuestion from '../components/AddQuestion';
-import { uploadDocumentation, createQuiz, addQuestion, uploadQuizFile } from '../services/api';
+import { fetchDocumentation, fetchQuizzes, uploadDocumentation, createQuiz, addQuestion, uploadQuizFile } from '../services/api';
+import * as storageService from '../services/storageService';
+import ManageDocumentation from '../components/ManageDocumentation';
+import ManageQuizzes from '../components/ManageQuizzes';
 
 function AdminPanel({ activeTab: initialTab = 'documentation' }) {
   const [activeTab, setActiveTab] = useState(initialTab);
@@ -33,20 +36,37 @@ function AdminPanel({ activeTab: initialTab = 'documentation' }) {
     setUploadStatus({ type: '', message: '' });
 
     try {
-      // Make the API call to upload documentation
-      await uploadDocumentation(docTitle.trim(), docContent.trim());
+      console.log('Submitting documentation form...');
+
+      // Check if user is authenticated
+      if (!storageService.isAuthenticated()) {
+        throw new Error('You must be logged in to upload documentation');
+      }
+
+      // Try the API service first (which now has localStorage fallback)
+      let result;
+      try {
+        result = await uploadDocumentation(docTitle.trim(), docContent.trim());
+        console.log('Documentation upload successful:', result);
+      } catch (apiError) {
+        console.error('API upload failed, using direct localStorage method:', apiError);
+
+        // Direct fallback to localStorage
+        result = storageService.addDocumentation(docTitle.trim(), docContent.trim());
+        console.log('Documentation saved directly to localStorage:', result);
+      }
 
       // Show success message
       setUploadStatus({
         type: 'success',
-        message: `Documentation "${docTitle}" uploaded successfully!`
+        message: `Documentation "${docTitle}" uploaded successfully! ID: ${result.id}`
       });
 
       // Reset form
       setDocTitle('');
       setDocContent('');
     } catch (error) {
-      console.error('Error uploading documentation:', error);
+      console.error('Error in documentation submit handler:', error);
       setUploadStatus({
         type: 'error',
         message: error.message || 'Failed to upload documentation. Please try again.'
@@ -218,10 +238,25 @@ function AdminPanel({ activeTab: initialTab = 'documentation' }) {
           Documentation Upload
         </button>
         <button
+          className={activeTab === 'manage-docs' ? 'active' : ''}
+          onClick={() => {
+            console.log('Manage Documentation tab clicked');
+            setActiveTab('manage-docs');
+          }}
+        >
+          Manage Documentation
+        </button>
+        <button
           className={activeTab === 'quiz' ? 'active' : ''}
           onClick={() => setActiveTab('quiz')}
         >
           Quiz Upload
+        </button>
+        <button
+          className={activeTab === 'manage-quizzes' ? 'active' : ''}
+          onClick={() => setActiveTab('manage-quizzes')}
+        >
+          Manage Quizzes
         </button>
         <button
           className={activeTab === 'custom-quiz' ? 'active' : ''}
@@ -263,8 +298,16 @@ function AdminPanel({ activeTab: initialTab = 'documentation' }) {
               />
             </div>
 
-            <button type="submit" className="upload-btn">Upload Documentation</button>
+            <button type="submit" className="upload-btn" disabled={isLoading}>
+              {isLoading ? 'Uploading...' : 'Upload Documentation'}
+            </button>
           </form>
+        </div>
+      )}
+
+      {activeTab === 'manage-docs' && (
+        <div className="manage-section">
+          <ManageDocumentation />
         </div>
       )}
 
@@ -315,6 +358,12 @@ function AdminPanel({ activeTab: initialTab = 'documentation' }) {
               {isLoading ? 'Uploading...' : 'Upload Quiz'}
             </button>
           </form>
+        </div>
+      )}
+
+      {activeTab === 'manage-quizzes' && (
+        <div className="manage-section">
+          <ManageQuizzes />
         </div>
       )}
 

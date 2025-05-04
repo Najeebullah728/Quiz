@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import * as storageService from '../services/storageService';
 
 function AdminLogin() {
   const [username, setUsername] = useState('');
@@ -41,8 +42,7 @@ function AdminLogin() {
 
           if (response.ok && data.success) {
             // Authentication successful
-            localStorage.setItem('adminAuthenticated', 'true');
-            localStorage.setItem('adminUsername', username);
+            storageService.login(username);
 
             // Check if there's a redirect URL saved
             const redirectUrl = localStorage.getItem('adminRedirectUrl');
@@ -71,8 +71,7 @@ function AdminLogin() {
       // Fallback authentication when server is not available
       if (username === 'Njeebullah@12' && password === 'Najeebullah@123') {
         // Authentication successful
-        localStorage.setItem('adminAuthenticated', 'true');
-        localStorage.setItem('adminUsername', username);
+        storageService.login(username);
 
         // Check if there's a redirect URL saved
         const redirectUrl = localStorage.getItem('adminRedirectUrl');

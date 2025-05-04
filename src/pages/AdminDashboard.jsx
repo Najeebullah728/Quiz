@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, NavLink, Outlet } from 'react-router-dom';
 import { logout } from '../services/api';
+import * as storageService from '../services/storageService';
 
 function AdminDashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -9,13 +10,15 @@ function AdminDashboard() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check if user is authenticated
-    const adminAuth = localStorage.getItem('adminAuthenticated');
-    const adminUsername = localStorage.getItem('adminUsername');
+    // Check if user is authenticated using the storage service
+    const isAuth = storageService.isAuthenticated();
+    const adminUsername = storageService.getUsername();
 
-    if (adminAuth !== 'true') {
+    if (!isAuth) {
+      console.log('User is not authenticated, redirecting to login');
       navigate('/admin');
     } else {
+      console.log('User is authenticated:', adminUsername);
       setIsAuthenticated(true);
       setUsername(adminUsername || 'Admin');
     }

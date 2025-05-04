@@ -4,7 +4,6 @@ import bcrypt from 'bcryptjs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
-import 'dotenv/config';
 
 // Get the directory name
 const __filename = fileURLToPath(import.meta.url);
@@ -24,7 +23,7 @@ app.use(session({
   secret: process.env.SESSION_SECRET || 'najeebullah-quiz-app-secret',
   resave: false,
   saveUninitialized: false,
-  cookie: {
+  cookie: { 
     secure: isProduction, // Use secure cookies in production
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
     sameSite: isProduction ? 'none' : 'lax' // Required for cross-site cookies in production
@@ -32,38 +31,35 @@ app.use(session({
 }));
 
 // Default admin credentials
-const defaultUsername = process.env.ADMIN_USERNAME || 'Najeebullahpython@12';
+const defaultUsername = process.env.ADMIN_USERNAME || 'Najeebullah@12';
 const defaultPassword = process.env.ADMIN_PASSWORD || 'path="Najeebullah@123"';
 
 // Database setup - use different approaches for development and production
 let db;
 
 // Import memory database for production
-(async () => {
-  try {
-    const memoryDbModule = await import('./src/data/memoryDb.js');
+import('./src/data/memoryDb.js').then(module => {
+  if (isProduction) {
+    // In production (Vercel), use in-memory database
+    console.log('Using in-memory database for production');
+    db = module.default;
+    console.log('Memory database loaded successfully');
+  } else {
+    // In development, try to use SQLite first
+    try {
+      console.log('Using SQLite database for development');
+      
+      // Ensure data directory exists
+      const dataDir = path.join(__dirname, 'data');
+      if (!fs.existsSync(dataDir)) {
+        fs.mkdirSync(dataDir, { recursive: true });
+      }
 
-    if (isProduction) {
-      // In production (Vercel), use in-memory database
-      console.log('Using in-memory database for production');
-      db = memoryDbModule.default;
-      console.log('Memory database loaded successfully');
-    } else {
-      // In development, try to use SQLite first
-      try {
-        console.log('Using SQLite database for development');
-
-        // Ensure data directory exists
-        const dataDir = path.join(__dirname, 'data');
-        if (!fs.existsSync(dataDir)) {
-          fs.mkdirSync(dataDir, { recursive: true });
-        }
-
-        // Initialize SQLite database
-        const { default: Database } = await import('better-sqlite3');
-        const dbPath = path.join(dataDir, 'quiz_app.db');
-        db = new Database(dbPath);
-
+      // Initialize SQLite database
+      const Database = require('better-sqlite3');
+      const dbPath = path.join(dataDir, 'quiz_app.db');
+      db = new Database(dbPath);
+      
       // Create tables
       db.exec(`
         CREATE TABLE IF NOT EXISTS admin_settings (
@@ -97,7 +93,7 @@ let db;
           FOREIGN KEY (quiz_id) REFERENCES quizzes(id)
         );
       `);
-
+      
       // Check if default admin credentials exist, if not create them
       const checkAdmin = db.prepare('SELECT * FROM admin_settings WHERE id = 1').get();
       if (!checkAdmin) {
@@ -112,22 +108,21 @@ let db;
         db.prepare('UPDATE admin_settings SET username = ?, password_hash = ? WHERE id = 1').run(defaultUsername, hash);
         console.log(`Admin credentials updated to: username: ${defaultUsername}`);
       }
-
+      
       console.log('SQLite database initialized successfully');
     } catch (err) {
       console.error('Failed to initialize SQLite database:', err);
       // Fallback to memory database if SQLite fails
-      db = memoryDbModule.default;
+      db = module.default;
       console.log('Fallback to memory database');
     }
   }
-
+  
   // Set up API routes once database is ready
   setupApiRoutes();
-  } catch (err) {
-    console.error('Failed to load database:', err);
-  }
-})();
+}).catch(err => {
+  console.error('Failed to load database:', err);
+});
 
 // Function to set up API routes
 function setupApiRoutes() {
@@ -223,75 +218,20 @@ function setupApiRoutes() {
   });
 
   app.post('/api/documentation', requireAuth, (req, res) => {
-    try {
-      console.log('Documentation upload request received');
-      const { title, content } = req.body;
+    const { title, content } = req.body;
 
-      if (!title || !content) {
-        console.log('Documentation upload failed: Missing title or content');
-        return res.status(400).json({ error: 'Title and content are required' });
-      }
-
-      console.log(`Processing documentation upload: "${title}"`);
-      let result;
-      if (isProduction) {
-        result = db.addDocumentation(title, content);
-      } else {
-        result = db.prepare('INSERT INTO documentation (title, content) VALUES (?, ?)').run(title, content);
-        result = {
-          id: result.lastInsertRowid,
-          title,
-          content,
-          created_at: new Date().toISOString()
-        };
-      }
-
-      console.log(`Documentation upload successful. ID: ${result.id}`);
-      res.json(result);
-    } catch (error) {
-      console.error('Error uploading documentation:', error);
-      res.status(500).json({
-        error: 'Failed to upload documentation',
-        details: error.message
-      });
+    if (!title || !content) {
+      return res.status(400).json({ error: 'Title and content are required' });
     }
-  });
 
-  // Delete documentation
-  app.delete('/api/documentation/:id', requireAuth, (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      console.log(`Received request to delete documentation with ID: ${id}`);
-
-      if (isNaN(id)) {
-        console.log('Invalid ID format');
-        return res.status(400).json({ error: 'Invalid ID format' });
-      }
-
-      let result;
-      if (isProduction) {
-        result = db.deleteDocumentation(id);
-        if (!result) {
-          return res.status(404).json({ error: 'Documentation not found' });
-        }
-      } else {
-        // First check if the documentation exists
-        const doc = db.prepare('SELECT * FROM documentation WHERE id = ?').get(id);
-        if (!doc) {
-          console.log('Documentation not found');
-          return res.status(404).json({ error: 'Documentation not found' });
-        }
-
-        // Delete the documentation
-        result = db.prepare('DELETE FROM documentation WHERE id = ?').run(id);
-        console.log(`Deleted documentation with ID: ${id}, title: ${doc.title}`);
-      }
-
-      res.json({ success: true, message: 'Documentation deleted successfully', id });
-    } catch (error) {
-      console.error('Error deleting documentation:', error);
-      res.status(500).json({ error: error.message });
+    let result;
+    if (isProduction) {
+      result = db.addDocumentation(title, content);
+    } else {
+      result = db.prepare('INSERT INTO documentation (title, content) VALUES (?, ?)').run(title, content);
+      result = { id: result.lastInsertRowid, title, content };
     }
+    res.json(result);
   });
 
   // Quiz routes
@@ -301,7 +241,7 @@ function setupApiRoutes() {
       quizzes = db.getAllQuizzes();
     } else {
       quizzes = db.prepare('SELECT * FROM quizzes ORDER BY created_at DESC').all();
-
+      
       // Get questions for each quiz
       quizzes = quizzes.map(quiz => {
         const questions = db.prepare('SELECT * FROM questions WHERE quiz_id = ?').all(quiz.id);
@@ -335,47 +275,6 @@ function setupApiRoutes() {
       result = { id: result.lastInsertRowid, title, description, questions: [] };
     }
     res.json(result);
-  });
-
-  // Delete quiz
-  app.delete('/api/quizzes/:id', requireAuth, (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      console.log(`Received request to delete quiz with ID: ${id}`);
-
-      if (isNaN(id)) {
-        console.log('Invalid ID format');
-        return res.status(400).json({ error: 'Invalid ID format' });
-      }
-
-      let result;
-      if (isProduction) {
-        result = db.deleteQuiz(id);
-        if (!result) {
-          return res.status(404).json({ error: 'Quiz not found' });
-        }
-      } else {
-        // First check if the quiz exists
-        const quiz = db.prepare('SELECT * FROM quizzes WHERE id = ?').get(id);
-        if (!quiz) {
-          console.log('Quiz not found');
-          return res.status(404).json({ error: 'Quiz not found' });
-        }
-
-        // Delete associated questions first
-        db.prepare('DELETE FROM questions WHERE quiz_id = ?').run(id);
-        console.log(`Deleted questions for quiz ID: ${id}`);
-
-        // Delete the quiz
-        result = db.prepare('DELETE FROM quizzes WHERE id = ?').run(id);
-        console.log(`Deleted quiz with ID: ${id}, title: ${quiz.title}`);
-      }
-
-      res.json({ success: true, message: 'Quiz deleted successfully', id });
-    } catch (error) {
-      console.error('Error deleting quiz:', error);
-      res.status(500).json({ error: error.message });
-    }
   });
 
   // Question routes
@@ -414,60 +313,8 @@ function setupApiRoutes() {
     res.json({ status: 'ok', production: isProduction });
   });
 
-  // Debug route to check database state
-  app.get('/api/debug/db', requireAuth, (_, res) => {
-    try {
-      let stats;
-      if (isProduction) {
-        stats = db.getStats();
-      } else {
-        const docCount = db.prepare('SELECT COUNT(*) as count FROM documentation').get();
-        const quizCount = db.prepare('SELECT COUNT(*) as count FROM quizzes').get();
-        const questionCount = db.prepare('SELECT COUNT(*) as count FROM questions').get();
-        const adminCount = db.prepare('SELECT COUNT(*) as count FROM admin_settings').get();
-
-        stats = {
-          documentation: docCount.count,
-          quizzes: quizCount.count,
-          questions: questionCount.count,
-          admins: adminCount.count
-        };
-      }
-
-      res.json({
-        status: 'ok',
-        production: isProduction,
-        stats,
-        timestamp: new Date().toISOString()
-      });
-    } catch (error) {
-      console.error('Error getting database stats:', error);
-      res.status(500).json({
-        status: 'error',
-        message: 'Failed to get database stats',
-        error: error.message
-      });
-    }
-  });
-
-  // Serve index.html for all other routes to support client-side routing
-  app.get('/', (_, res) => {
-    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
-  });
-
-  app.get('/admin', (_, res) => {
-    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
-  });
-
-  app.get('/admin/*', (_, res) => {
-    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
-  });
-
-  app.get('/documentation', (_, res) => {
-    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
-  });
-
-  app.get('/quiz', (_, res) => {
+  // Catch-all route for client-side routing
+  app.get('*', (_, res) => {
     res.sendFile(path.join(__dirname, 'dist', 'index.html'));
   });
 }

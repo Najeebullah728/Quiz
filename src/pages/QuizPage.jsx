@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import Quiz from '../components/Quiz';
 import quizQuestions from '../data/questions';
 import { fetchQuizzes } from '../services/api';
+import * as storageService from '../services/storageService';
 
 function QuizPage() {
   const [quizzes, setQuizzes] = useState([]);
@@ -15,11 +16,25 @@ function QuizPage() {
         setIsLoading(true);
         setError(null);
 
-        // Fetch quizzes from the API
-        const fetchedQuizzes = await fetchQuizzes();
+        console.log('Loading quizzes...');
+
+        // Try to fetch quizzes from the API (which now has localStorage fallback)
+        let fetchedQuizzes = [];
+        try {
+          fetchedQuizzes = await fetchQuizzes();
+          console.log(`Received ${fetchedQuizzes.length} quizzes from API/localStorage`);
+        } catch (fetchError) {
+          console.error('Error fetching quizzes:', fetchError);
+
+          // Direct fallback to localStorage if the API service fails completely
+          console.log('Direct fallback to localStorage for quizzes');
+          fetchedQuizzes = storageService.getQuizzes();
+          console.log(`Retrieved ${fetchedQuizzes.length} quizzes directly from localStorage`);
+        }
 
         // If no quizzes are returned, use sample data
         if (fetchedQuizzes.length === 0) {
+          console.log('No quizzes found, using sample data');
           // Fallback to sample data if no quizzes are available
           const sampleQuizzes = [
             {
@@ -34,14 +49,15 @@ function QuizPage() {
           setQuizzes(fetchedQuizzes);
         }
       } catch (err) {
-        console.error('Error loading quizzes:', err);
-        setError('Failed to load quizzes. Please try again later.');
+        console.error('Error in quiz page component:', err);
+        setError(`Failed to load quizzes: ${err.message}`);
 
-        // Fallback to sample data if API fails
+        // Last resort fallback to hardcoded sample data
+        console.log('Using hardcoded fallback sample quizzes');
         const sampleQuizzes = [
           {
             id: 1,
-            title: 'Python Strings Quiz (Sample)',
+            title: 'Python Strings Quiz (Emergency Fallback)',
             description: 'Test your understanding of Python strings with this quiz.',
             questions: quizQuestions
           }

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { fetchDocumentation } from '../services/api';
+import * as storageService from '../services/storageService';
 
 function Documentation() {
   const [docs, setDocs] = useState([]);
@@ -15,26 +16,48 @@ function Documentation() {
         setIsLoading(true);
         setError(null);
 
-        // Fetch documentation from the API
-        const fetchedDocs = await fetchDocumentation();
+        console.log('Loading documentation...');
+
+        // Try to fetch documentation from the API (which now has localStorage fallback)
+        let fetchedDocs = [];
+        try {
+          fetchedDocs = await fetchDocumentation();
+          console.log(`Received ${fetchedDocs.length} documentation items from API/localStorage`);
+        } catch (fetchError) {
+          console.error('Error fetching documentation:', fetchError);
+
+          // Direct fallback to localStorage if the API service fails completely
+          console.log('Direct fallback to localStorage');
+          fetchedDocs = storageService.getDocumentation();
+          console.log(`Retrieved ${fetchedDocs.length} documentation items directly from localStorage`);
+        }
+
+        if (fetchedDocs.length === 0) {
+          console.log('No documentation found, showing empty state');
+          setDocs([]);
+          setSelectedDoc(null);
+          setContent('');
+          return;
+        }
 
         setDocs(fetchedDocs);
 
         // Set the first doc as selected by default
-        if (fetchedDocs.length > 0) {
-          setSelectedDoc(fetchedDocs[0]);
-          setContent(fetchedDocs[0].content);
-        }
-      } catch (err) {
-        console.error('Error loading documentation:', err);
-        setError('Failed to load documentation. Please try again later.');
+        setSelectedDoc(fetchedDocs[0]);
+        setContent(fetchedDocs[0].content);
 
-        // Fallback to sample data if API fails
+        console.log(`Selected documentation: "${fetchedDocs[0].title}"`);
+      } catch (err) {
+        console.error('Error in documentation component:', err);
+        setError(`Failed to load documentation: ${err.message}`);
+
+        // Last resort fallback to hardcoded sample data
+        console.log('Using hardcoded fallback sample data');
         const sampleDocs = [
           {
             id: 1,
-            title: 'Python Strings (Sample)',
-            content: `# Python Strings\n\nThis is sample content. The actual documentation could not be loaded.`
+            title: 'Python Strings (Emergency Fallback)',
+            content: `# Python Strings\n\nThis is emergency fallback content. The actual documentation could not be loaded.`
           }
         ];
 
