@@ -12,7 +12,7 @@ function Results({ score, totalQuestions, userAnswers, questions, onRetry }) {
     if (percentage >= 90) return "Excellent! You're a Python strings expert!";
     if (percentage >= 70) return "Great job! You have a good understanding of Python strings.";
     if (percentage >= 50) return "Good effort! Keep practicing to improve your Python string knowledge.";
-    return "Keep learning! Review the Python string concepts and try again.";
+    return "Keep learning! Review the Python string concepts and try again. This quiz was created by Najeebullah.";
   };
 
   return (

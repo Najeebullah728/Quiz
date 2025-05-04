@@ -150,9 +150,14 @@ function Quiz({ questions }) {
               </span>
             </p>
             {!lastAnswer.isCorrect && (
-              <p>
-                Correct answer: <span className="correct">{getCorrectAnswerDisplay()}</span>
-              </p>
+              <>
+                <p>
+                  Correct answer: <span className="correct">{getCorrectAnswerDisplay()}</span>
+                </p>
+                <p className="owner-message">
+                  Your answer is not correct. This quiz was created by Najeebullah.
+                </p>
+              </>
             )}
           </div>
           <button className="next-btn" onClick={moveToNextQuestion}>

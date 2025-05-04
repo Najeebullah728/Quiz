@@ -1,0 +1,51 @@
+[
+  {
+    "type": "multipleChoice",
+    "question": "What will be the output of the following Python code?\n\nprint(\"Hello\"[1])",
+    "options": [
+      { "id": "A", "text": "H" },
+      { "id": "B", "text": "e" },
+      { "id": "C", "text": "l" },
+      { "id": "D", "text": "o" }
+    ],
+    "correctAnswer": "B"
+  },
+  {
+    "type": "multipleChoice",
+    "question": "Which of the following methods can be used to get the length of a string in Python?",
+    "options": [
+      { "id": "A", "text": "size()" },
+      { "id": "B", "text": "length()" },
+      { "id": "C", "text": "len()" },
+      { "id": "D", "text": "count()" }
+    ],
+    "correctAnswer": "C"
+  },
+  {
+    "type": "fillInTheBlank",
+    "question": "To concatenate two strings in Python, we use the _____ operator.",
+    "correctAnswer": "+"
+  },
+  {
+    "type": "multipleChoice",
+    "question": "What is the output of the following Python code?\n\nprint(\"Python\"[-1])",
+    "options": [
+      { "id": "A", "text": "P" },
+      { "id": "B", "text": "y" },
+      { "id": "C", "text": "t" },
+      { "id": "D", "text": "n" }
+    ],
+    "correctAnswer": "D"
+  },
+  {
+    "type": "multipleChoice",
+    "question": "Which of the following is NOT a valid way to create a string in Python?",
+    "options": [
+      { "id": "A", "text": "s = 'Hello'" },
+      { "id": "B", "text": "s = \"Hello\"" },
+      { "id": "C", "text": "s = '''Hello'''" },
+      { "id": "D", "text": "s = str(Hello)" }
+    ],
+    "correctAnswer": "D"
+  }
+]
