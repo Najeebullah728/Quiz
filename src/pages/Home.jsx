@@ -31,7 +31,7 @@ function Home() {
         <p>New to Python? Start with our beginner-friendly documentation and then test your knowledge with quizzes.</p>
         <div className="action-buttons">
           <a href="/documentation" className="primary-btn">Start Learning</a>
-          <a href="/quiz" className="secondary-btn">Test Your Skills</a>
+          <a href="https://quiz2-steel-mu.vercel.app/" className="secondary-btn">Test Your Skills</a>
         </div>
       </div>
     </div>
